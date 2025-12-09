@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>TicketPro - 순위표</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --card: rgba(18, 18, 25, 0.9);
+            --card-hover: rgba(25, 25, 35, 0.95);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(139, 92, 246, 0.4);
+            --text-primary: #f0f0f5;
+            --text-secondary: rgba(235, 235, 245, 0.7);
+            --text-muted: rgba(235, 235, 245, 0.45);
+            --accent-purple: #8b5cf6;
+            --accent-violet: #a78bfa;
+            --accent-pink: #ec4899;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-orange: #f97316;
+            --accent-gold: #f59e0b;
+            --accent-silver: #a0aec0;
+            --accent-bronze: #a16207;
+            --gradient-purple: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+            --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+            --gradient-orange: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Background Effects */
+        .bg-effects {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .gradient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(150px);
+            opacity: 0.5;
+            animation: float 20s infinite ease-in-out;
+        }
+        .gradient-orb-1 {
+            width: 400px;
+            height: 400px;
+            background: rgba(139, 92, 246, 0.3);
+            top: 10%;
+            right: 10%;
+            animation-duration: 25s;
+        }
+        .gradient-orb-2 {
+            width: 300px;
+            height: 300px;
+            background: rgba(236, 72, 153, 0.25);
+            bottom: 15%;
+            left: 15%;
+            animation-duration: 30s;
+            animation-delay: -5s;
+        }
+         @keyframes float {
+            0% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) translateX(20px) rotate(20deg); }
+            100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+        }
+
+
+        /* 네비게이션 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-size: 20px;
+            font-weight: 700;
+            text-decoration: none;
+            color: white;
+        }
+        .nav-logo:hover {
+            background: var(--gradient-purple);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-btn .lucide {
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+        .nav-btn:hover .lucide {
+            color: var(--accent-violet);
+        }
+
+        /* 메인 컨테이너 */
+        .main-container {
+            position: relative;
+            z-index: 10;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 120px 32px 40px;
+        }
+
+        /* 페이지 헤더 */
+        .page-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .page-title {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .page-title .lucide {
+            width: 48px;
+            height: 48px;
+            stroke-width: 2.5;
+            color: var(--accent-gold);
+        }
+
+        .page-title .gradient-text {
+            background: var(--gradient-purple);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 18px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* 필터 탭 */
+        .filter-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+
+        .filter-tab.active {
+            background: var(--gradient-purple);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+        }
+
+        /* 난이도 필터 */
+        .difficulty-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 40px;
+        }
+
+        .difficulty-tab {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .difficulty-tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+        }
+
+        .difficulty-tab.active {
+            background: rgba(167, 139, 250, 0.2);
+            color: var(--accent-violet);
+        }
+
+        /* 랭킹 테이블 */
+        .ranking-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+        }
+
+        .ranking-header {
+            display: grid;
+            grid-template-columns: 80px 1fr 150px 150px;
+            padding: 16px 32px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ranking-list {
+            max-height: 700px;
+            overflow-y: auto;
+        }
+
+        .ranking-item {
+            display: grid;
+            grid-template-columns: 80px 1fr 150px 150px;
+            padding: 16px 32px;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s ease;
+            animation: item-in 0.5s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes item-in {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+
+        .ranking-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .ranking-item.me {
+            background: rgba(139, 92, 246, 0.1);
+            border-left: 4px solid var(--accent-purple);
+        }
+        
+        /* Top 3 Styles */
+        .ranking-item.gold {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), transparent 80%);
+        }
+        .ranking-item.silver {
+            background: linear-gradient(90deg, rgba(160, 174, 192, 0.1), transparent 80%);
+        }
+        .ranking-item.bronze {
+            background: linear-gradient(90deg, rgba(161, 98, 7, 0.1), transparent 80%);
+        }
+
+        .rank {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .rank.gold { color: var(--accent-gold); }
+        .rank.silver { color: var(--accent-silver); }
+        .rank.bronze { color: var(--accent-bronze); }
+        
+        .rank .lucide {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gradient-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .player-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .player-name .me-tag {
+            color: var(--accent-violet);
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 4px;
+        }
+
+        .time-value {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+
+        .date-value {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* 난이도 배지 */
+        .difficulty-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .difficulty-badge.easy { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .difficulty-badge.normal { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .difficulty-badge.hard { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        /* 로딩/빈 상태 */
+        .status-message {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(139, 92, 246, 0.2);
+            border-top-color: var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status-message .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--accent-purple);
+        }
+        .status-message .icon .lucide {
+            width: 48px; height: 48px;
+        }
+
+        /* 내 기록 카드 */
+        .my-record-card {
+            background: linear-gradient(145deg, rgba(22, 16, 38, 0.85), rgba(18, 18, 25, 0.9));
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 40px;
+        }
+
+        .my-record-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .my-record-title .lucide {
+            width: 20px;
+            height: 20px;
+            color: var(--accent-violet);
+        }
+
+        .my-record-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .my-record-item {
+            background: rgba(10, 10, 15, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.2s ease;
+        }
+        .my-record-item:hover {
+            transform: translateY(-3px);
+            background: rgba(10, 10, 15, 1);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+        .my-record-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .my-record-label .lucide {
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+        }
+
+        .my-record-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent-violet);
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+        }
+
+        @media (max-width: 768px) {
+            .main-container { padding: 100px 16px 32px; }
+            .ranking-header,
+            .ranking-item {
+                grid-template-columns: 60px 1fr 100px;
+                padding: 12px 16px;
+            }
+            .ranking-header > *:last-child,
+            .ranking-item > *:last-child { display: none; }
+            .filter-tabs { gap: 8px; }
+            .filter-tab { padding: 10px 16px; font-size: 13px; }
+            .page-title { font-size: 36px; }
+            .page-title .lucide { width: 36px; height: 36px; }
+            .page-subtitle { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="bg-effects">
+        <div class="gradient-orb gradient-orb-1"></div>
+        <div class="gradient-orb gradient-orb-2"></div>
+    </div>
+
+    <!-- 네비게이션 -->
+    <nav class="navbar">
+        <a href="../../../a/index.html" class="nav-logo">TicketPro</a>
+        <div class="nav-actions">
+            <span id="userInfo" class="nav-btn" style="border: none; cursor: default;"></span>
+            <a href="choice.html" class="nav-btn">
+                <i data-lucide="ticket"></i>
+                <span>티켓팅</span>
+            </a>
+            <a href="chat.html" class="nav-btn">
+                <i data-lucide="message-circle"></i>
+                <span>채팅</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- 메인 컨테이너 -->
+    <div class="main-container">
+        <div class="page-header">
+            <h1 class="page-title">
+                <i data-lucide="trophy"></i>
+                <span class="gradient-text">Leaderboard</span>
+            </h1>
+            <p class="page-subtitle">가장 빠른 티켓팅 기록을 세우고 명예의 전당에 오르세요.</p>
+        </div>
+
+        <!-- 카테고리 필터 -->
+        <div class="filter-tabs">
+            <button class="filter-tab active" data-category="all">전체</button>
+            <button class="filter-tab" data-category="콘서트">콘서트</button>
+            <button class="filter-tab" data-category="굿즈">굿즈</button>
+            <button class="filter-tab" data-category="식당">식당</button>
+        </div>
+
+        <!-- 난이도 필터 -->
+        <div class="difficulty-tabs">
+            <button class="difficulty-tab active" data-difficulty="all">전체</button>
+            <button class="difficulty-tab" data-difficulty="쉬움">쉬움</button>
+            <button class="difficulty-tab" data-difficulty="보통">보통</button>
+            <button class="difficulty-tab" data-difficulty="어려움">어려움</button>
+        </div>
+
+        <!-- 내 기록 -->
+        <div class="my-record-card" id="myRecordCard" style="display: none;">
+            <h2 class="my-record-title"><i data-lucide="user-check"></i>나의 최고 기록</h2>
+            <div class="my-record-grid" id="myRecordGrid">
+                <!-- 동적으로 채워짐 -->
+            </div>
+        </div>
+
+        <!-- 랭킹 테이블 -->
+        <div class="ranking-card">
+            <div class="ranking-header">
+                <div>순위</div>
+                <div>플레이어</div>
+                <div>기록</div>
+                <div>날짜</div>
+            </div>
+            <div class="ranking-list" id="rankingList">
+                <div class="status-message">
+                    <div class="spinner"></div>
+                    <p>랭킹을 불러오는 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Supabase 설정 -->
+    <script src="../js/supabase-config.js"></script>
+
+    <script>
+        lucide.createIcons();
+        
+        // 로그인 체크
+        if (!isLoggedIn()) {
+            window.location.href = 'login.html';
+        }
+
+        // 사용자 정보 표시
+        const user = getCurrentUser();
+        const userInfoEl = document.getElementById('userInfo');
+        userInfoEl.innerHTML = `<i data-lucide="user-circle-2"></i> ${user.nickname}`;
+        lucide.createIcons({
+            nodes: [userInfoEl.querySelector('.lucide')]
+        });
+
+
+        // 현재 필터 상태
+        let currentCategory = 'all';
+        let currentDifficulty = 'all';
+
+        // DOM 요소
+        const rankingList = document.getElementById('rankingList');
+        const myRecordCard = document.getElementById('myRecordCard');
+        const myRecordGrid = document.getElementById('myRecordGrid');
+
+        // 필터 이벤트
+        document.querySelectorAll('.filter-tab, .difficulty-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const group = tab.classList.contains('filter-tab') ? '.filter-tab' : '.difficulty-tab';
+                document.querySelectorAll(group).forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                currentCategory = document.querySelector('.filter-tab.active').dataset.category;
+                currentDifficulty = document.querySelector('.difficulty-tab.active').dataset.difficulty;
+                loadRanking();
+            });
+        });
+
+        // 랭킹 로드
+        async function loadRanking() {
+            rankingList.innerHTML = `
+                <div class="status-message">
+                    <div class="spinner"></div>
+                    <p>랭킹을 불러오는 중...</p>
+                </div>
+            `;
+
+            try {
+                let data;
+                if (currentCategory === 'all' && currentDifficulty === 'all') {
+                    // 전체 통합 랭킹
+                    data = await getOverallRanking(50);
+                    renderOverallRanking(data);
+                } else {
+                     // 카테고리/난이도별 랭킹
+                    let categoryToFetch = currentCategory === 'all' ? ['콘서트', '굿즈', '식당'] : [currentCategory];
+                    let difficultyToFetch = currentDifficulty === 'all' ? ['쉬움', '보통', '어려움'] : [currentDifficulty];
+                    
+                    const allData = [];
+                    for (const cat of categoryToFetch) {
+                        for (const diff of difficultyToFetch) {
+                            const catData = await getRanking(cat, diff, 50);
+                            allData.push(...catData);
+                        }
+                    }
+                    // 시간순 정렬 후 50개로 자르기
+                    allData.sort((a, b) => a.elapsed_time - b.elapsed_time);
+                    data = allData.slice(0, 50);
+                    renderCategoryRanking(data);
+                }
+
+                // 내 기록 로드
+                loadMyRecords();
+            } catch (error) {
+                console.error('랭킹 로드 오류:', error);
+                rankingList.innerHTML = `
+                    <div class="status-message">
+                        <div class="icon"><i data-lucide="x-circle"></i></div>
+                        <p>랭킹을 불러오는데 실패했습니다</p>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        }
+        
+        // 전체 통합 랭킹 렌더링
+        function renderOverallRanking(data) {
+            if (!data || data.length === 0) {
+                rankingList.innerHTML = `
+                    <div class="status-message">
+                        <div class="icon"><i data-lucide="trophy"></i></div>
+                        <p>아직 기록이 없습니다.<br>첫 번째 기록의 주인공이 되어보세요!</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            rankingList.innerHTML = data.map((item, index) => {
+                const rank = index + 1;
+                const isMe = item.nickname === user.nickname;
+                
+                let rankClass = '';
+                let rankContent = rank;
+                if (rank === 1) { rankClass = 'gold'; rankContent = `<i data-lucide="award"></i>`; }
+                else if (rank === 2) { rankClass = 'silver'; rankContent = `<i data-lucide="award"></i>`; }
+                else if (rank === 3) { rankClass = 'bronze'; rankContent = `<i data-lucide="award"></i>`; }
+
+                return `
+                    <div class="ranking-item ${isMe ? 'me' : ''} ${rankClass}" style="animation-delay: ${index * 50}ms">
+                        <div class="rank ${rankClass}">${rankContent}</div>
+                        <div class="player-info">
+                            <div class="player-avatar">${item.nickname.charAt(0).toUpperCase()}</div>
+                            <div class="player-name">${item.nickname} ${isMe ? '<span class="me-tag">(나)</span>' : ''}</div>
+                        </div>
+                        <div class="time-value">${formatTimeSimple(item.best_time)}</div>
+                        <div class="date-value">${item.total_records}회 도전</div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+
+        // 카테고리별 랭킹 렌더링
+        function renderCategoryRanking(data) {
+            if (!data || data.length === 0) {
+                rankingList.innerHTML = `
+                    <div class="status-message">
+                        <div class="icon"><i data-lucide="trophy"></i></div>
+                        <p>아직 기록이 없습니다.<br>첫 번째 기록의 주인공이 되어보세요!</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            rankingList.innerHTML = data.map((item, index) => {
+                const rank = index + 1;
+                const isMe = item.nickname === user.nickname;
+                
+                let rankClass = '';
+                let rankContent = rank;
+                if (rank === 1) { rankClass = 'gold'; rankContent = `<i data-lucide="award"></i>`; }
+                else if (rank === 2) { rankClass = 'silver'; rankContent = `<i data-lucide="award"></i>`; }
+                else if (rank === 3) { rankClass = 'bronze'; rankContent = `<i data-lucide="award"></i>`; }
+
+                const date = new Date(item.created_at).toLocaleDateString('ko-KR');
+
+                const difficultyMap = { '쉬움': 'easy', '보통': 'normal', '어려움': 'hard' };
+                const diffClass = difficultyMap[item.difficulty] || 'normal';
+
+                return `
+                    <div class="ranking-item ${isMe ? 'me' : ''} ${rankClass}" style="animation-delay: ${index * 50}ms">
+                        <div class="rank ${rankClass}">${rankContent}</div>
+                        <div class="player-info">
+                            <div class="player-avatar">${item.nickname.charAt(0).toUpperCase()}</div>
+                            <div class="player-name">
+                                ${item.nickname} ${isMe ? '<span class="me-tag">(나)</span>' : ''}
+                                <span class="difficulty-badge ${diffClass}">${item.difficulty}</span>
+                            </div>
+                        </div>
+                        <div class="time-value">${formatTimeSimple(item.elapsed_time)}</div>
+                        <div class="date-value">${date}</div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // 내 기록 로드
+        async function loadMyRecords() {
+            const records = await getMyBestRecords();
+
+            if (records && records.length > 0) {
+                myRecordCard.style.display = 'block';
+                myRecordGrid.innerHTML = records.map(record => {
+                    const iconMap = { '콘서트': 'mic', '굿즈': 'shopping-bag', '식당': 'utensils' };
+                    const categoryName = record.category;
+                    const difficultyName = record.difficulty;
+
+                    return `
+                        <div class="my-record-item">
+                            <div class="my-record-label">
+                                <i data-lucide="${iconMap[categoryName] || 'help-circle'}"></i>
+                                <span>${categoryName} (${difficultyName})</span>
+                            </div>
+                            <div class="my-record-value">${formatTimeSimple(record.best_time)}</div>
+                        </div>
+                    `;
+                }).join('');
+                lucide.createIcons();
+            } else {
+                myRecordCard.style.display = 'none';
+            }
+        }
+        
+        // 초기 로드
+        loadRanking();
+    </script>
+</body>
+</html>

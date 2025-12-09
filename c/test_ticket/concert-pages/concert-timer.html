@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>티케팅 게임 — 타이머</title>
+  <style>
+    .result-area-card {
+      background: rgba(16, 12, 28, 0.75);
+      border: 1px solid rgba(120, 119, 198, 0.18);
+      border-radius: 22px;
+      box-shadow: 0 8px 32px rgba(16,12,28,0.18);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      padding: 32px 24px;
+      color: #fff;
+      margin-top: 18px;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html,body{height:100%;margin:0;font-family:'Inter','Noto Sans KR',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#0b0a13;color:#111827;overflow:hidden;}
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1;}
+    .card{width:720px;max-width:92%;text-align:center}
+    .start-btn{background:#2563EB;color:#fff;border:0;padding:14px 28px;border-radius:999px;font-weight:700;cursor:pointer;font-size:20px}
+    #pre-count{font-size:120px;font-weight:900;color:#fff;display:none;line-height:1;height:1em}
+    #ten-timer{font-size:120px;font-weight:900;color:#fff}
+    #result-msg{font-size:20px;font-weight:700;color:#fff;margin-bottom:12px}
+    #start-msg, #ready-msg { color: #fff !important; }
+    @keyframes pulse-red{0%{box-shadow:0 0 0 0 rgba(239,68,68,0.7);transform:scale(1)}50%{box-shadow:0 0 20px 10px rgba(239,68,68,0);transform:scale(1.05)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0);transform:scale(1)}}
+    .pulse-red{animation:pulse-red 1s infinite;background:#ef4444!important}
+    .bg-effects {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .gradient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    .gradient-orb-1 {
+      width: 700px; height: 700px;
+      left: -200px; top: -200px;
+      background: radial-gradient(circle at 30% 30%, #a78bfa 0%, #6366f1 80%, transparent 100%);
+    }
+    .gradient-orb-2 {
+      width: 600px; height: 600px;
+      right: -180px; top: 0;
+      background: radial-gradient(circle at 70% 20%, #c084fc 0%, #a21caf 80%, transparent 100%);
+    }
+    .gradient-orb-3 {
+      width: 500px; height: 500px;
+      left: 50%; bottom: -200px; transform: translateX(-50%);
+      background: radial-gradient(circle at 50% 80%, #818cf8 0%, #f472b6 80%, transparent 100%);
+    }
+  </style>
+</head>
+<body>
+  <!-- Background Effects -->
+  <div class="bg-effects">
+    <div class="gradient-orb gradient-orb-1"></div>
+    <div class="gradient-orb gradient-orb-2"></div>
+    <div class="gradient-orb gradient-orb-3"></div>
+  </div>
+  <div class="wrap">
+    <div class="card">
+
+
+      <!-- 게임 UI: 3-2-1 카운트 및 10초 타이머 (원본 그대로 이동) -->
+      <div id="game-overlay" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(15,23,42,0.06);z-index:9999;">
+        <div style="width:720px;max-width:92%;background:transparent;padding:24px 20px;text-align:center;">
+          <div id="pre-count" style="font-size:120px;font-weight:900;color:#fff;display:none;line-height:1;height:1em;"></div>
+
+          <div id="start-msg" style="display:none;font-size:18px;font-weight:700;color:#fff;margin-bottom:12px;">잠시 후 게임이 시작됩니다</div>
+
+          <div id="timer-area" style="display:none;">
+            <div id="ready-msg" style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;">타이머가 끝나면 티케팅을 시작하세요!</div>
+              <div id="ten-timer" style="font-size:120px;font-weight:900;color:#fff;"></div>
+            <div style="margin-top:18px;">
+              <button id="connect-btn" type="button" style="background:#2563EB;color:#fff;border:0;padding:14px 28px;border-radius:999px;font-weight:700;cursor:pointer;font-size:20px;">사이트 접속하기</button>
+            </div>
+          </div>
+
+          <div id="result-area" class="result-area-card" style="display:none;">
+            <div id="result-msg" style="font-size:20px;font-weight:700;color:#fff;margin-bottom:12px;"></div>
+            <div>
+              <button id="retry-btn" type="button" style="background:#fff;color:#2563EB;border:2px solid #2563EB;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">다시하기</button>
+            </div>
+          </div>
+          <!-- Queue modal (hidden by default) -->
+          <div id="queue-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:10000;padding:24px;">
+            <div style="width:820px;max-width:96%;background:#f3f4ff;border-radius:12px;padding:28px 30px;color:#0f172a;box-shadow:0 12px 30px rgba(2,6,23,0.15);">
+              <h2 style="margin:0 0 10px 0;font-size:28px;text-align:center;font-weight:900;color:#0b1220;">예매 대기중입니다.</h2>
+              <div style="display:flex;gap:18px;align-items:flex-start;">
+                <div style="flex:1;">
+                  <p style="margin:6px 0 12px 0;font-size:16px;line-height:1.4;color:#0b1220;"><span id="queue-top-msg" style="font-weight:700;">사이트에 접속중입니다..</span><br><span style="font-weight:700;color:#4f46e5;">사용자 님 앞에 <span id="queue-count">83</span> 명의 대기자가 있습니다.</span><br><span style="color:#374151;">잠시 기다려주세요.</span></p>
+                </div>
+              </div>
+              <div style="margin-top:10px;">
+                <div style="background:#eef2ff;border-radius:999px;padding:6px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);">
+                  <div id="queue-bar" style="width:16%;height:18px;background:#4f46e5;border-radius:999px;transition:width 400ms ease;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // Game: 3-2-1 pre-count, then 10.00s timer (0.01s precision), and connect button behavior
+  (function(){
+    var levelButtons = document.querySelectorAll('.level-button');
+    var overlay = document.getElementById('game-overlay');
+    var preCountEl = document.getElementById('pre-count');
+    var timerArea = document.getElementById('timer-area');
+    var tenTimer = document.getElementById('ten-timer');
+    var connectBtn = document.getElementById('connect-btn');
+    var resultArea = document.getElementById('result-area');
+    var resultMsg = document.getElementById('result-msg');
+    var retryBtn = document.getElementById('retry-btn');
+
+    var timerId = null;
+    var startTime = 0;
+    var duration = 10000; // 10 seconds in ms (default)
+    var remaining = duration;
+    // capture selected level and hall from query params (e.g. ?level=easy&hall=A)
+    var urlParams = new URLSearchParams(window.location.search);
+    var selectedLevel = urlParams.get('level') || 'normal';
+    var selectedHall = urlParams.get('hall') || 'default';
+    console.log('concert-timer: selectedLevel=', selectedLevel, 'selectedHall=', selectedHall);
+
+    // Client-side configuration maps (no backend required)
+    // Base configs per level
+    var levelConfigs = {
+      easy:   { duration: 10000, successWindow: 150 },
+      normal: { duration: 5000, successWindow: 80 },
+      hard:   { duration: 5000,  successWindow: 40 }
+    };
+
+    // Hall modifiers: multiply or add to base duration (flexible approach)
+    var hallModifiers = {
+      default: { multiplier: 1.0, addMs: 0 },
+      A: { multiplier: 1.0, addMs: 0 },
+      B: { multiplier: 0.95, addMs: -200 },
+      C: { multiplier: 1.1, addMs: 300 }
+    };
+
+    // Compute effective config by merging level base and hall modifier
+    var effective = { duration: duration, successWindow: 0 };
+    if(levelConfigs[selectedLevel]){
+      effective.duration = levelConfigs[selectedLevel].duration;
+      effective.successWindow = levelConfigs[selectedLevel].successWindow;
+    }
+    var hallMod = hallModifiers[selectedHall] || hallModifiers.default;
+    effective.duration = Math.max(1000, Math.round(effective.duration * (hallMod.multiplier || 1) + (hallMod.addMs || 0)));
+    // apply effective duration
+    duration = effective.duration;
+    remaining = duration;
+    console.log('concert-timer: effective=', effective);
+
+    function showOverlay(){ overlay.style.display = 'flex'; }
+    function hideOverlay(){ overlay.style.display = 'none'; }
+
+    function disableLevelButtons(){ levelButtons.forEach(b=>b.disabled=true); }
+    function enableLevelButtons(){ levelButtons.forEach(b=>b.disabled=false); }
+
+    var startMsgEl = document.getElementById('start-msg');
+    var readyMsgEl = document.getElementById('ready-msg');
+
+    function runPreCount(){
+      return new Promise(function(resolve){
+        // show top message then pre-count
+        if(startMsgEl) startMsgEl.style.display = 'block';
+        preCountEl.style.display = 'block';
+        timerArea.style.display = 'none';
+        resultArea.style.display = 'none';
+        var nums = ['3','2','1'];
+        var i = 0;
+        preCountEl.textContent = nums[i];
+        var pc = setInterval(function(){
+          i++;
+          if(i < nums.length){
+            preCountEl.textContent = nums[i];
+          } else {
+            clearInterval(pc);
+            preCountEl.style.display = 'none';
+            if(startMsgEl) startMsgEl.style.display = 'none';
+            resolve();
+          }
+        }, 1000);
+      });
+    }
+
+    function formatMs(ms){
+      var s = Math.max(0, ms / 1000);
+      // 하드 모드는 소수점 없이 초 단위만 표시
+      if(selectedLevel === 'hard') {
+        return Math.ceil(s).toString();
+      }
+      return s.toFixed(2);
+    }
+
+    function startTenTimer(){
+      timerArea.style.display = 'block';
+      resultArea.style.display = 'none';
+      startTime = performance.now();
+      // reset endTime marker
+      window._timerEndTime = null;
+      function tick(){
+        var now = performance.now();
+        var elapsed = now - startTime;
+        remaining = Math.max(0, duration - elapsed);
+        tenTimer.textContent = formatMs(remaining);
+        if(remaining <= 0){
+          cancelAnimationFrame(timerId);
+          timerId = null;
+          tenTimer.textContent = selectedLevel === 'hard' ? '0' : '0.00';
+          // record the moment timer reached zero
+          if(!window._timerEndTime) window._timerEndTime = performance.now();
+          // Add red pulse effect to connect button
+          connectBtn.classList.add('pulse-red');
+          return;
+        }
+        timerId = requestAnimationFrame(tick);
+      }
+      timerId = requestAnimationFrame(tick);
+    }
+
+    function stopTenTimer(){ if(timerId) { cancelAnimationFrame(timerId); timerId = null; } }
+
+    function showResult(msg){
+      resultMsg.textContent = msg;
+      resultArea.style.display = 'block';
+      timerArea.style.display = 'none';
+    }
+
+    levelButtons.forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        // start game
+        disableLevelButtons();
+        showOverlay();
+        await runPreCount();
+        startTenTimer();
+      });
+    });
+
+    // Auto-start when the page loads (so navigation from level selection begins the game immediately)
+    (async function autoStartIfNeeded(){
+      // small delay to allow rendering
+      await new Promise(r=>setTimeout(r, 50));
+      try{
+        disableLevelButtons();
+        showOverlay();
+        await runPreCount();
+        startTenTimer();
+      } catch(e){
+        // fail silently
+        console.error(e);
+      }
+    })();
+
+    connectBtn.addEventListener('click', function(){
+      // success if remaining is within successWindow
+      if(remaining > effective.successWindow){
+        // clicked too early
+        stopTenTimer();
+        showResult('이런.. 티켓팅이 열리기 전에 접속했습니다!');
+        return;
+      }
+      // compute how long after timer end the user clicked
+      var clickTime = performance.now();
+      var endTime = window._timerEndTime || clickTime;
+      var extraMs = Math.max(0, clickTime - endTime);
+      var extraSec = extraMs / 1000;
+      // rates per second (converted from user spec: per 0.5s -> amount)
+      var ratesPerSecond = { easy: 25 * 2, normal: 75 * 2, hard: 150 * 2 };
+      var rate = ratesPerSecond[selectedLevel] || ratesPerSecond['normal'];
+      var added = Math.round(rate * extraSec);
+      // base counts by level
+      var baseByLevel = { easy: 50, normal: 83, hard: 120 };
+      var base = baseByLevel[selectedLevel] || 80;
+      var initialQueue = Math.max(0, base + added);
+      // show queue modal and animate decreasing over 6.5s
+      showQueueModal(initialQueue, 6500);
+    });
+
+    // Queue modal logic
+    function showQueueModal(initialCount, durationMs){
+      var modal = document.getElementById('queue-modal');
+      var countEl = document.getElementById('queue-count');
+      var bar = document.getElementById('queue-bar');
+      var topMsg = document.getElementById('queue-top-msg');
+      if(!modal || !countEl || !bar) return;
+      // initialize
+      var queueCount = Math.max(0, Math.round(initialCount || 0));
+      countEl.textContent = queueCount;
+      bar.style.width = '0%';
+      if(topMsg) topMsg.textContent = '사이트에 접속중입니다..';
+      modal.style.display = 'flex';
+
+      // animate: decrease queueCount to 0 over durationMs (default 6500ms)
+      var dur = durationMs || 6500;
+      var start = performance.now();
+      function frame(now){
+        var t = Math.min(1, (now - start) / dur);
+        // linear progress for bar (you can ease if desired)
+        var percent = Math.round(t * 100);
+        bar.style.width = percent + '%';
+        // decrease queue count proportionally (round)
+        var current = Math.max(0, Math.round(queueCount * (1 - t)));
+        countEl.textContent = current;
+        if(t < 1){
+          requestAnimationFrame(frame);
+        } else {
+          // complete
+          if(topMsg) topMsg.textContent = '대기열 처리 완료 — 예매 페이지로 이동합니다.';
+          setTimeout(function(){ 
+            // 타이머 종료 시각을 URL 파라미터로 전달
+            var timerEndTime = window._timerEndTime || performance.now();
+            window.location.href = 'ticketingMain.html?level=' + selectedLevel + '&hall=' + encodeURIComponent(selectedHall) + '&timerEnd=' + timerEndTime;
+          }, 1200);
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+
+    retryBtn.addEventListener('click', function(){
+      // 현재 모드와 홀 정보를 URL 파라미터로 명시적으로 전달하여 새로고침
+      var params = new URLSearchParams(window.location.search);
+      params.set('level', selectedLevel);
+      params.set('hall', selectedHall);
+      window.location.search = params.toString();
+    });
+
+  })();
+  </script>
+</body>
+</html>
